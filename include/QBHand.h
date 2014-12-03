@@ -13,10 +13,10 @@ class QBHand : public QBcube
 
         virtual short int* setPosition(double); // Imposta la posizione
         virtual short int* getMeas(); // Ottiene Misure del motore
-
-        void Init();
+        virtual double getAngle();
 
     protected:
+
 
     private:
 };

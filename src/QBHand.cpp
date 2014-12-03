@@ -3,6 +3,7 @@
 QBHand::QBHand(int id) : QBcube(id)
 {
     cube_comm = NULL;
+
 }
 
 QBHand::QBHand(comm_settings* cs, int id) : QBcube(cs, id)
@@ -24,8 +25,8 @@ short int* QBHand::setPosition(double position){
     short int curr_ref[2];
 
     // Position for the 2 engine of the cube.
-    curr_ref[0] = position*15000;
-    curr_ref[1] = position*15000;
+    curr_ref[0] = position*POS_LIMIT_M1[1]/4;
+    curr_ref[1] = position*POS_LIMIT_M1[1]/4;
 
     commSetInputs(cube_comm, ID, curr_ref);
 
@@ -46,16 +47,18 @@ short int* QBHand::getMeas(){
 
     commGetMeasurements(cube_comm, ID, buf_meas);
 
-    *meas = buf_meas[3];
+    *meas = buf_meas[0];
 
     return meas;
 }
 
-void QBHand::Init(){
 
-    int pos_limits[4];
+double QBHand::getAngle(){
 
-    while(commGetParam(cube_comm, ID, PARAM_POS_LIMIT, pos_limits, 4));
+	short int* meas;
 
-    std::cout << pos_limits[0] << " " << pos_limits[1] << " " << pos_limits[2] << " " << pos_limits[3] << std::endl;
+	meas = getMeas();
+
+	return -(((double) *meas)/DEG_TICK_MULTIPLIER)*(M_PI/180.0);
+
 }

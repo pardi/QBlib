@@ -33,7 +33,7 @@ short int* QBcube::getMeas(){
     short int *meas = new short int(3);
 
     if (cube_comm == NULL)
-        return NULL;
+        ret#include <unistd.h>urn NULL;
 
     commGetMeasurements(cube_comm, ID, meas);
 
@@ -42,7 +42,7 @@ short int* QBcube::getMeas(){
 
 short int* QBcube::setPosition(double position, double stiffness){
 
-    if ((stiffness > 1) || (stiffness < 0))
+    if ((stiffness > 35) || (stiffness < 0))
         return NULL;
 
   //  if (!stateAct || open())
@@ -107,6 +107,8 @@ bool QBcube::open(){
         if (cube_comm->file_handle == INVALID_HANDLE_VALUE)
             return false;
     }
+
+    Init();
 
     return activate();
 }
@@ -175,8 +177,10 @@ void QBcube::Init(){
 
     while(commGetParam(cube_comm, ID, PARAM_POS_LIMIT, pos_limits, 4));
 
-    std::cout << pos_limits[0] << " " << pos_limits[1] << " " << pos_limits[2] << " " << pos_limits[3] << std::endl;
-
+    POS_LIMIT_M1[0] = pos_limits[0]/2;
+    POS_LIMIT_M1[1] = pos_limits[1]/2;
+    POS_LIMIT_M2[0] = pos_limits[2]/2;
+    POS_LIMIT_M2[1] = pos_limits[3]/2;
 
 }
 
@@ -186,11 +190,17 @@ double QBcube::getAngle(){
 
 	meas = getMeas();
 
-	double k = meas[2];
-
-	//std::cout << 88*DEG_TICK_MULTIPLIER*(M_PI/180)<< "D " <<meas[2] << std::endl;
-
 	return -(((double) meas[2])/DEG_TICK_MULTIPLIER)*(M_PI/180.0);
 
 }
 
+double QBcube::getStiff(){
+    short int* meas;
+
+    meas = getMeas();
+
+    std::cout << meas[0] << " " <<meas[1] << " " << meas[2] << std::endl;
+
+    return ((double) meas[1] - (double) meas[2])/2 ;
+
+}

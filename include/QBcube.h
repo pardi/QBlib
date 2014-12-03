@@ -23,9 +23,11 @@ class QBcube
         virtual short int* setPosition(double, double); // Pos e Stiff Simple
         bool close();
         double getAngle();
+        double getStiff();
+
+        void Init();
 
         bool activate();
-
 
     protected:
         // Protect Variables
@@ -35,9 +37,10 @@ class QBcube
         bool stateAct, stateOpen;
         std::string port_;
 
+        int POS_LIMIT_M1[2], POS_LIMIT_M2[2]; // Posizioni limite motore 1 e 2
 
         // Protect Function
-        void Init();
+
 
     private:
 
