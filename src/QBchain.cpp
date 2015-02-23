@@ -5,6 +5,17 @@ QBchain::QBchain(){
     cube_comm = NULL;
 }
 
+/*
+//////////////////////////////////////////////////////////
+
+_input: 
+        cubeBuf, vector with cubes id
+_output:
+        boolean function state
+
+/////////////////////////////////////////////////////////
+*/
+
 bool QBchain::addCubes(std::vector<int> cubeBuf)
 {
     QBcube* tmp_cube;
@@ -18,6 +29,18 @@ bool QBchain::addCubes(std::vector<int> cubeBuf)
 
     return true;
 }
+
+/*
+//////////////////////////////////////////////////////////
+
+_input: 
+        handBuf, vector with hands ids
+_output:
+        boolean function state
+
+/////////////////////////////////////////////////////////
+*/
+
 
 bool QBchain::addHands(std::vector<int> handBuf){
     QBHand* tmp_hand;
@@ -38,7 +61,7 @@ QBchain::~QBchain()
 }
 
 
-bool QBchain::setPort(const char * P_IN){
+bool QBchain::setPort(const char* P_IN){
 
     if (P_IN == NULL)
         return false;
@@ -56,12 +79,15 @@ bool QBchain::open(){
 
     cube_comm = new comm_settings;
 
+
     openRS485(cube_comm, port_.c_str());
+
 
     if (cube_comm->file_handle == INVALID_HANDLE_VALUE)
         return false;
 
     Init();
+
 
     return true;
 }
@@ -136,7 +162,7 @@ bool QBchain::readIt(){
 
     for (std::vector<QBcube*>::iterator it = cubes.begin(); it!=cubes.end(); ++it){
         meas = (*it)->getMeas();
-       std::cout << meas[0] << ' ' << meas[1] << " "<< meas[2] << std::endl;
+	std::cout << meas[0] << ' ' << meas[1] << " "<< meas[2] << std::endl;
     }
 
     for (std::vector<QBHand*>::iterator it = hands.begin(); it!=hands.end(); ++it){
@@ -164,8 +190,7 @@ double* QBchain::readAng(){
     for (std::vector<QBHand*>::iterator it = hands.begin(); it!=hands.end(); ++it)
         buf[i++] = (*it)->getAngle();
 
-    std::cout << cubes.size() + hands.size() << " " << i << std::endl;
-
+	 //std::cout << cubes.size() + hands.size() << " " << i << std::endl;
 	return buf;
 }
 
@@ -173,7 +198,8 @@ double* QBchain::readAng(){
 void QBchain::Init(){
 
     for (std::vector<QBcube*>::iterator it = cubes.begin(); it!=cubes.end(); ++it)
-        (*it)->Init();
+	(*it)->Init();
+
 
     for (std::vector<QBHand*>::iterator it = hands.begin(); it!=hands.end(); ++it)
         (*it)->Init();

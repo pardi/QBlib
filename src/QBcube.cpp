@@ -33,7 +33,7 @@ short int* QBcube::getMeas(){
     short int *meas = new short int(3);
 
     if (cube_comm == NULL)
-        ret#include <unistd.h>urn NULL;
+        return NULL;
 
     commGetMeasurements(cube_comm, ID, meas);
 
