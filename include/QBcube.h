@@ -1,7 +1,7 @@
 #ifndef QBCUBE_H
 #define QBCUBE_H
 
-#include <string>
+#include <string.h>
 #include <iostream>
 #include <math.h>
 
@@ -13,33 +13,107 @@
 class QBcube
 {
     public:
-        QBcube(int);
-        QBcube(comm_settings*, int);
-        virtual ~QBcube();
 
-        bool open();
-        bool setPort(const char*);
-        short int* getMeas();
-        virtual short int* setPosition(double, double); // Pos e Stiff Simple
-        bool close();
-        double getAngle();
-        double getStiff();
+    //------------------------------ QBcube
+    /*
+    / Costructor of QBcube class
+    */
+    QBcube(const int id = 1);
 
-        void Init();
+    //------------------------------ QBcube
+    /*
+    / External costructor of QBcube class
+    */
+    QBcube(comm_settings*, const int id = 1);
 
-        bool activate();
+    //------------------------------ ~QBcube
+    /*
+    / Distructor of QBcube class
+    */
+    virtual ~QBcube();
+
+
+    // ------------------------------
+    //      Further Functions
+    // ------------------------------
+
+    //------------------------------ open
+    /*
+    / Open serial communication
+    */
+    //bool open();
+    bool open(const char*);
+
+    //------------------------------ setPort
+    /*
+    / Set communication port name
+    */
+    //bool setPort(const char*);
+
+    //------------------------------ getMeas
+    /*
+    / Get measurement of positions [1, 2 and L] from cube in tic
+    */
+    bool getMeas(short int*);
+
+    //------------------------------ setPosition
+    /*
+    / Set position and stiffness preset of the cube, default input is set to radiants
+    */
+    bool setPosAndPreset(double, double, const char* unit = "rad");
+
+    //------------------------------ setPosition
+    /*
+    / Set position and stiffness percentage of the cube, default input is set to radiants
+    */
+    bool setPosAndStiffPerc(double, double, const char* unit = "rad");
+
+    //------------------------------ close
+    /*
+    / Close serial communication
+    */
+    void close();
+
+    //------------------------------ getAngle
+    /*
+    / Get position angle in the chosen unit of measure
+    */
+    bool getAngle(double*, const char* unit  = "rad");
+
+
+    //------------------------------ gePreset
+    /*
+    / Get preset of the cube
+    */
+    bool getPreset(double*);
+
+    // //------------------------------ init
+
+    // / Inizialize default values for the cube
+
+    // void init();
+
+    //------------------------------ activate
+    /*
+    / Active the cube
+    */
+    bool activate();
+
+    //------------------------------ deactivate
+    /*
+    / Active the cube
+    */
+    bool deactivate();
+
 
     protected:
         // Protect Variables
 
-        comm_settings* cube_comm;
-        int ID;
-        bool stateAct, stateOpen;
-        std::string port_;
+    comm_settings* cube_comm;
+    int ID;
+    bool stateAct;
 
-        int POS_LIMIT_M1[2], POS_LIMIT_M2[2]; // Posizioni limite motore 1 e 2
-
-        // Protect Function
+    //, stateOpen;
 
 
     private:

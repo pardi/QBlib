@@ -1,206 +1,462 @@
 #include "QBcube.h"
 
-// Costruttore di un elemento Cubo scelto un ID
+using std::cout;
+using std::cerr;
+using std::cin;
+using std::endl;
 
-QBcube::QBcube(int id = 1)
-{
+//-----------------------------------------------------
+//                                               QBcube
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Costructor of QBcube class
+/ *****************************************************
+/   argument:
+/       - id, ID of the cube
+/   return:
+/
+*/
+
+QBcube::QBcube(const int id) {
+
     ID = id;
     cube_comm = NULL;
-    stateAct = false;
-    stateOpen = false;
 }
 
-// Costruttore di un elemento Cubo scelto un ID, con seriale fornita dall'esterno
+//-----------------------------------------------------
+//                                               QBcube
+//-----------------------------------------------------
 
-QBcube::QBcube(comm_settings* cs, int id = 1)
-{
+/*
+/ *****************************************************
+/ External costructor of QBcube class
+/ *****************************************************
+/   argument:
+/       - cs, serial communication pointer to the cube
+/       - id, ID of the cube
+/   return:
+/
+*/
+
+QBcube::QBcube(comm_settings* cs, const int id) {
+
     ID = id;
-    stateAct = false;
-    stateOpen = true;
     cube_comm = cs;
 }
 
-// Distruttore
 
-QBcube::~QBcube()
-{
+//-----------------------------------------------------
+//                                              ~QBcube
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Distructor of QBcube class
+/ *****************************************************
+/
+/   arguments:
+/   return:
+/
+*/
+
+QBcube::~QBcube() {
+
     close();
-}
-
-
-short int* QBcube::getMeas(){
-
-    short int *meas = new short int(3);
-
-    if (cube_comm == NULL)
-        return NULL;
-
-    commGetMeasurements(cube_comm, ID, meas);
-
-    return meas;
-}
-
-short int* QBcube::setPosition(double position, double stiffness){
-
-    if ((stiffness > 35) || (stiffness < 0))
-        return NULL;
-
-  //  if (!stateAct || open())
-  //      return NULL;
-
-    if(!activate())
-        return NULL;
-
-    short int pos, stiff;
-
-    pos = -position * (180.0 / M_PI);
-
-    // Convert degrees to ticks.
-    pos *= DEG_TICK_MULTIPLIER;
-    stiff = stiffness * DEG_TICK_MULTIPLIER;
-
-    // Stiffness and position set.
-    short int curr_ref[2];
-
-    if (pos > (DEFAULT_SUP_LIMIT / pow(2, DEFAULT_RESOLUTION) - DEFAULT_STIFFNESS * DEG_TICK_MULTIPLIER))
-        pos = (DEFAULT_SUP_LIMIT / pow(2, DEFAULT_RESOLUTION) - DEFAULT_STIFFNESS * DEG_TICK_MULTIPLIER);
-    else
-        if (pos < (DEFAULT_INF_LIMIT / pow(2, DEFAULT_RESOLUTION) + DEFAULT_STIFFNESS * DEG_TICK_MULTIPLIER))
-            pos = (DEFAULT_INF_LIMIT / pow(2, DEFAULT_RESOLUTION) + DEFAULT_STIFFNESS * DEG_TICK_MULTIPLIER);
-
-
-    if (stiff > DEFAULT_STIFFNESS * DEG_TICK_MULTIPLIER)
-        stiff = DEFAULT_STIFFNESS * DEG_TICK_MULTIPLIER;
-    else
-        if (stiff < 0)
-            stiff = 0;
-
-    // Position for the 2 engine of the cube.
-    curr_ref[0] = pos - stiff;
-    curr_ref[1] = pos + stiff;
-
-    commSetInputs(cube_comm, ID, curr_ref);
-
-    if (cube_comm->file_handle == INVALID_HANDLE_VALUE)
-        return NULL;
-
-    return getMeas();
-
-}
-
-
-bool QBcube::open(){
-
-    if (stateAct){
-        std::cout << "Cube already open." << std::endl;
-        return false;
-    }
-
-    if(cube_comm == NULL){
-        cube_comm = new comm_settings;
-        if(port_.empty()){
-            std::cout << "Port not setted." << std::endl;
-            return false;
-        }
-        openRS485(cube_comm, port_.c_str());
-
-        if (cube_comm->file_handle == INVALID_HANDLE_VALUE)
-            return false;
-    }
-
-    Init();
-
-    return activate();
-}
-
-// Attivo il cubo
-
-bool QBcube::activate(){
-
-    if (stateAct)
-        return true;
-
-    if (cube_comm == NULL)
-        return false;
-
-    commActivate(cube_comm, ID, 1);
-
-    if (cube_comm->file_handle == INVALID_HANDLE_VALUE)
-        return false;
-
-    stateAct = true;
-
-    return true;
-}
-
-// Chiudo la comunicazione seriale
-
-bool QBcube::close(){
-
-    if (cube_comm == NULL)
-        return false;
-
-    stateAct = false;
-
-    closeRS485(cube_comm);
-
-    if (cube_comm->file_handle == INVALID_HANDLE_VALUE)
-        return false;
 
     delete cube_comm;
     cube_comm = NULL;
+}
+
+//-----------------------------------------------------
+//                                              getMeas
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Get measurement of positions [1, 2, L] from cube in ticks
+/ *****************************************************
+/   arguments:
+/       - meas, 3 elements array pointer for measurements
+/   return:
+/       true  on success
+/       false on failure
+/
+*/
+
+bool QBcube::getMeas(short int* meas) {
+
+    if (cube_comm == NULL)
+        return false;
+
+    if (commGetMeasurements(cube_comm, ID, meas))
+        return false;
 
     return true;
 }
 
-// Setto il nome della porta
+//-----------------------------------------------------
+//                                      setPosAndPreset
+//-----------------------------------------------------
 
-bool QBcube::setPort(const char * P_IN){
+/*
+/ *****************************************************
+/ Set position and stiffness preset of the cube, default
+/ input is set to radiants
+/ *****************************************************
+/   argumnets:
+/       - position, reference angle
+/       - stiffPreset, stiffness preset
+/       - unit, measurement unit for position
+/               and stiffness [rad or deg]
+/   return:
+/       true  on success
+/       false on failure
+/
+*/
 
-    if (P_IN == NULL)
+bool QBcube::setPosAndPreset(double position, double stiffPreset, const char* unit) {
+
+    // Check input values consistence
+
+    if (stiffPreset > DEFAULT_STIFFNESS) {
+
+        stiffPreset = DEFAULT_STIFFNESS;
+        cerr << "WARNING: Preset saturated to " << stiffPreset << endl;
+
+    } else if (stiffPreset < 0) {
+
+        stiffPreset = 0;
+        cerr << "WARNING: Preset saturated to " << stiffPreset << endl;
+
+    }
+
+    // Convert position in 'deg' if needed
+
+    if (!strcmp(unit, "rad")) {
+
+        position *= (180.0 / M_PI);
+
+    } else if (strcmp(unit, "deg")) {
+
+        cerr << "ERROR: specify 'deg' or 'rad' as unit" << endl;
         return false;
 
-    if (!port_.empty()){
-        std::cout << "Porta gia' settata" << std::endl;
+    }
+
+    // Check Max Position available
+    // XXX TODO: confronto fatto in gradi, cambinare in tic?
+    
+    if (position > DEFAULT_SUP_LIMIT*DEG_TICK_MULTIPLIER - stiffPreset){
+        cerr << position << endl;
+        position = DEFAULT_SUP_LIMIT*DEG_TICK_MULTIPLIER - stiffPreset;
+        cerr << "WARNING: Position saturated to " << position << endl;
+    }
+    else 
+        if (position < DEFAULT_INF_LIMIT*DEG_TICK_MULTIPLIER + stiffPreset){
+            position = DEFAULT_INF_LIMIT*DEG_TICK_MULTIPLIER + stiffPreset;
+            cerr << "WARNING: Position saturated to " << position << endl;
+        }
+
+    short int pos, sPreset;
+    short int curr_ref[2];
+
+    pos = position * DEG_TICK_MULTIPLIER;
+    sPreset = stiffPreset * DEG_TICK_MULTIPLIER;
+
+    // Set position for the 2 motors of the cube
+
+    curr_ref[0] = pos - sPreset;
+    curr_ref[1] = pos + sPreset;
+
+    // Call API function
+
+    commSetInputs(cube_comm, ID, curr_ref);
+
+    return true;
+}
+
+//-----------------------------------------------------
+//                                   setPosAndStiffPerc
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Set position and stiffness percentage of the cube,
+/ default input is set to radiants
+/ *****************************************************
+/   argumnets:
+/       - position, reference angle
+/       - stiffPerc, stiffness percentage; range: [0 - 32767]
+/       - unit, measurement unit for position [rad or deg]
+/
+/   return:
+/       true  on success
+/       false on failure
+/
+*/
+
+bool QBcube::setPosAndStiffPerc(double position, double stiffPerc, const char* unit) {
+
+    // Check input values consistence
+
+    if (stiffPerc > 100) {
+
+        stiffPerc = 100;
+        cerr << "WARNING: Stiffness percentage saturated to " << stiffPerc << endl;
+
+    } else if (stiffPerc < 0) {
+
+        stiffPerc = 0;
+        cerr << "WARNING: Stiffness percentage saturated to " << stiffPerc << endl;
+
+    }
+
+    // Convert position in 'deg' if needed
+
+    if (!strcmp(unit, "rad")) {
+
+        position *= (180.0 / M_PI);
+
+    } else if (strcmp(unit, "deg")) {
+
+        cerr << "ERROR: specify 'deg' or 'rad' as unit" << endl;
+        return false;
+
+    }
+
+
+    // XXX TODO: Check Max Position available
+    
+    
+    short int curr_ref[2];
+
+    curr_ref[0] = (short int)(position * DEG_TICK_MULTIPLIER);
+    curr_ref[1] = (short int)((stiffPerc * 32767.0) / 100.0);
+
+    // Call API function
+
+    commSetInputs(cube_comm, ID, curr_ref);
+
+    return false;
+}
+
+
+
+//-----------------------------------------------------
+//                                                 open
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Open serial communication with cube
+/ *****************************************************
+/   arguments:
+/       port, the communication port
+/   return:
+/       true  on success
+/       false on failure
+/
+*/
+
+bool QBcube::open(const char* port) {
+
+    // Check Connection State
+
+    if(cube_comm != NULL) {
+        cerr << "WARNING: Port already opened" << endl;
         return false;
     }
-    port_ = P_IN;
+
+    cube_comm = new comm_settings;
+
+    // Establish serial connection
+
+    openRS485(cube_comm, port);
+
+    if (cube_comm->file_handle == INVALID_HANDLE_VALUE) {
+        cerr << "ERROR: Unable to open port" << endl;
+        return false;
+    }
 
     return true;
 }
 
-// Inizializzo i valori di default del Cubo
+//-----------------------------------------------------
+//                                             activate
+//-----------------------------------------------------
 
-void QBcube::Init(){
+/*
+/ *****************************************************
+/ Activate the cube
+/ *****************************************************
+/   parameters:
+/   return:
+/       true  on success
+/       false on failure
+/
+*/
 
-    int pos_limits[4];
+bool QBcube::activate() {
 
-    while(commGetParam(cube_comm, ID, PARAM_POS_LIMIT, pos_limits, 4));
+    // Check connection state
 
-    POS_LIMIT_M1[0] = pos_limits[0]/2;
-    POS_LIMIT_M1[1] = pos_limits[1]/2;
-    POS_LIMIT_M2[0] = pos_limits[2]/2;
-    POS_LIMIT_M2[1] = pos_limits[3]/2;
+    if (cube_comm == NULL) {
+        cerr << "ERROR: Port not opened" << endl;
+        return false;
+    }
 
+    // Call cube function
+
+    commActivate(cube_comm, ID, 1);
+
+    // Check if the cube is active
+
+    char status;
+    commGetActivate(cube_comm, ID, &status);
+
+    if (!status){
+        cerr << "Unable to activate" << endl;
+        return false;
+    }
+
+    return true;
 }
 
-double QBcube::getAngle(){
+//-----------------------------------------------------
+//                                           deactivate
+//-----------------------------------------------------
 
-	short int* meas;
+/*
+/ *****************************************************
+/ Active the cube
+/ *****************************************************
+/   parameters:
+/   return:
+/       true  on success
+/       false on failure
+/
+*/
 
-	meas = getMeas();
+bool QBcube::deactivate() {
 
-	return -(((double) meas[2])/DEG_TICK_MULTIPLIER)*(M_PI/180.0);
+    // Check connection state
 
+    if (cube_comm == NULL){
+        cerr << "ERROR: Port not opened" << endl;
+        return false;
+    }
+
+    // Call cube function
+
+    commActivate(cube_comm, ID, 0);
+
+    // Check if the cube is active
+
+    char status;
+    commGetActivate(cube_comm, ID, &status);
+
+    if (status){
+        cerr << "Unable to deactivate" << endl;
+        return false;
+    }
+
+    return true;
 }
 
-double QBcube::getStiff(){
-    short int* meas;
 
-    meas = getMeas();
+//-----------------------------------------------------
+//                                                close
+//-----------------------------------------------------
 
-    std::cout << meas[0] << " " <<meas[1] << " " << meas[2] << std::endl;
+/*
+/ *****************************************************
+/ Close serial communication
+/ *****************************************************
+/   arguments:
+/   return:
+/
+*/
 
-    return ((double) meas[1] - (double) meas[2])/2 ;
+void QBcube::close() {
 
+    // Check Communication state
+
+    deactivate();
+
+    // Call cube function
+
+    closeRS485(cube_comm);
+
+    // XXX TODO: implementare close RS485 per la gestione dell'errore in chiusura
+}
+
+
+//-----------------------------------------------------
+//                                             getAngle
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Get position angle in the chosen unit of measure
+/ *****************************************************
+/   arguments:
+/       - angle, getted position in angle
+/       - unit, unit of measure [rad o deg]
+/   return:
+/       true  on success
+/       false on failure
+/
+*/
+
+bool QBcube::getAngle(double* angle, const char* unit){
+
+    short int meas[3];
+
+    // Get measurements
+    if(!getMeas(meas))
+        return false;
+
+    // Return position in the right unit
+
+    if (!strcmp(unit, "deg")) {
+        *angle = (((double) meas[2])/DEG_TICK_MULTIPLIER);
+    } else if (!strcmp(unit, "rad")) {
+        *angle = (((double) meas[2])/DEG_TICK_MULTIPLIER)*(M_PI/180);
+    } else {
+        cerr << "ERROR: specify 'deg' or 'rad' as unit" << endl;
+        return false;
+    }
+
+    return true;
+}
+
+//-----------------------------------------------------
+//                                            getPreset
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Get preset of the cube
+/ *****************************************************
+/   parameters:
+/   return:
+/       - preset value
+/
+*/
+
+//XXX ma serve? o comunque non e' meglio calcolarlo dai riferimenti che non dalle misure?
+bool QBcube::getPreset(double* preset) {
+
+    short int meas[3];
+
+    // Get position
+    if(!getMeas(meas))
+        return false;
+
+    // Compute preset value
+    *preset = (((double) meas[0] - (double) meas[1])/2)/DEG_TICK_MULTIPLIER;
+
+    return true;
 }

@@ -1,26 +1,44 @@
 #include "QBchain.h"
 
+
+//-----------------------------------------------------
+//                                              QBchain
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Costructor of QBchain class
+/ *****************************************************
+/       _input:
+/       _output:
+/
+*/
+
 QBchain::QBchain(){
 
     cube_comm = NULL;
 }
 
+//-----------------------------------------------------
+//                                             addCubes
+//-----------------------------------------------------
+
 /*
-//////////////////////////////////////////////////////////
-
-_input: 
-        cubeBuf, vector with cubes id
-_output:
-        boolean function state
-
-/////////////////////////////////////////////////////////
+/ *****************************************************
+/ Add cubes to the chain
+/ *****************************************************
+/       _input:
+/       - cubeBuf, vector with IDs of cubes
+/       _output:
+/       - [state]
+/
 */
 
 bool QBchain::addCubes(std::vector<int> cubeBuf)
 {
     QBcube* tmp_cube;
 
-    // CREO GLI ELEMENTI CUBO
+    // Allocate object QBcube, one for each cube in cubeBuf
 
     for (std::vector<int>::iterator it = cubeBuf.begin(); it != cubeBuf.end(); ++it){
         tmp_cube = new QBcube(cube_comm, *it);
@@ -30,22 +48,26 @@ bool QBchain::addCubes(std::vector<int> cubeBuf)
     return true;
 }
 
+//-----------------------------------------------------
+//                                             addHands
+//-----------------------------------------------------
+
 /*
-//////////////////////////////////////////////////////////
-
-_input: 
-        handBuf, vector with hands ids
-_output:
-        boolean function state
-
-/////////////////////////////////////////////////////////
+/ *****************************************************
+/ Add hands to the chain
+/ *****************************************************
+/       _input:
+/               - cubeBuf, vector with ID of hands
+/       _output:
+/               - [state]
+/
 */
 
-
 bool QBchain::addHands(std::vector<int> handBuf){
+
     QBHand* tmp_hand;
 
-    // CREO GLI ELEMENTI MANO
+    // Alloc object QBHand, one for each cube in handBuf
 
     for (std::vector<int>::iterator it = handBuf.begin(); it != handBuf.end(); ++it){
         tmp_hand = new QBHand(cube_comm, *it);
@@ -55,98 +77,264 @@ bool QBchain::addHands(std::vector<int> handBuf){
     return true;
 }
 
+//-----------------------------------------------------
+//                                             ~QBchain
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Destructor of QBchain class
+/ *****************************************************
+/       _input:
+/       _output:
+/
+*/
+
 QBchain::~QBchain()
 {
-    delete cube_comm;
+
+    close();
+    // Delete all cubes
+
+    for (std::vector<QBcube*>::iterator it = cubes.begin(); it!=cubes.end(); ++it)
+            delete (*it);
+
+    // Delete all hands
+
+    for (std::vector<QBHand*>::iterator it = hands.begin(); it!=hands.end(); ++it)
+            delete (*it);
+
+    cube_comm = NULL;
 }
 
 
-bool QBchain::setPort(const char* P_IN){
+//-----------------------------------------------------
+//                                                 open
+//-----------------------------------------------------
 
-    if (P_IN == NULL)
+/*
+/ *****************************************************
+/ Open connection with all cubes and hands
+/ *****************************************************
+/       _input:
+/       _output:
+/               [state]
+/
+*/
+
+bool QBchain::open(const char* port = "/dev/ttyUSB0"){
+
+    // Check connection state
+    if (cube_comm != NULL)
         return false;
-
-    if (!port_.empty()){
-        std::cout << "Porta gia' settata" << std::endl;
-        return false;
-    }
-
-    port_ = P_IN;
-    return true;
-}
-
-bool QBchain::open(){
 
     cube_comm = new comm_settings;
 
+    // Call cube function
 
-    openRS485(cube_comm, port_.c_str());
-
+    openRS485(cube_comm, port);
 
     if (cube_comm->file_handle == INVALID_HANDLE_VALUE)
         return false;
 
-    Init();
+    // Set default configuration for all objects
 
+    init();
 
     return true;
 }
+
+//-----------------------------------------------------
+//                                                close
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Close connection of all cubes and hands
+/ *****************************************************
+/       _input:
+/       _output:
+/               [state]
+/
+*/
 
 bool QBchain::close(){
 
+    // Check connection state
+
     if (cube_comm == NULL)
         return false;
+
+    // Deactivate cubes
+
+    deactivate();
+
+    // Call cube function
 
     closeRS485(cube_comm);
 
-    if (cube_comm->file_handle == INVALID_HANDLE_VALUE)
-        return false;
     return true;
 }
 
-bool QBchain::Activate(){
+//-----------------------------------------------------
+//                                             activate
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Close connection of all cubes and hands
+/ *****************************************************
+/       _input:
+/       _output:
+/               [state]
+/
+*/
+
+bool QBchain::activate(){
+
+    // Check connection state
 
     if (cube_comm == NULL)
         return false;
 
+    // Activate all cubes
+
+    int i = -1;
+
     for (std::vector<QBcube*>::iterator it = cubes.begin(); it!=cubes.end(); ++it)
-        (*it)->activate();
+        while(!((*it)->activate()) && ((++i) < 10));
+
+    if (i == NUM_OUT)
+        return false;
+
+    i = -1;
+
+    // Activate all hands
 
     for (std::vector<QBHand*>::iterator it = hands.begin(); it!=hands.end(); ++it)
-        (*it)->activate();
+        while(!((*it)->activate()) && ((++i) < 10));
+
+    if (i == NUM_OUT)
+        return false;
+
+    return true;
+}
+
+// TODO: Selective Activate
+
+//-----------------------------------------------------
+//                                           deactivate
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Close connection of all cubes and hands
+/ *****************************************************
+/       _input:
+/       _output:
+/               [state]
+/
+*/
+
+bool QBchain::deactivate(){
+
+    // Check connection state
+
+    if (cube_comm == NULL)
+        return false;
+
+    int i = -1;
+
+    // Activate all cubes
+
+    for (std::vector<QBcube*>::iterator it = cubes.begin(); it!=cubes.end(); ++it)
+        while(!((*it)->deactivate()) && ((++i) < 10));
+
+    if (i == NUM_OUT)
+        return false;
+
+    i = -1;
+
+    // Activate all hands
+
+    for (std::vector<QBHand*>::iterator it = hands.begin(); it!=hands.end(); ++it)
+        while(!((*it)->deactivate()) && ((++i) < 10));
+
+    if (i == NUM_OUT)
+        return false;
 
     return true;
 }
 
 
-bool QBchain::moveIt(std::vector<double> position, std::vector<double> stiffness){
 
-    if (position.size() != stiffness.size())
+
+//-----------------------------------------------------
+//                                               moveIt
+//-----------------------------------------------------
+
+/*
+/ *****************************************************
+/ Move the chain to desiderated position and preset,
+/ commanded is given in q-space configuration
+/ *****************************************************
+/       _input:
+/       - position, position for each cubes
+/       - preset, preset for each cubes
+/       - unit, unit of measure
+/       _output:
+/               [state]
+/
+*/
+
+bool QBchain::moveIt(std::vector<double> position, std::vector<double> preset, const char* unit = "rad"){
+
+    // Check input rightness values
+
+    if (position.size() != preset.size())
+        return false;
+
+    if (!strcmp(unit, "deg") && !strcmp(unit, "rad"))
         return false;
 
     std::vector<QBcube*>::iterator it = cubes.begin();
     std::vector<double>::iterator nP = position.begin();
-    std::vector<double>::iterator nS = stiffness.begin();
+    std::vector<double>::iterator nS = preset.begin();
+
+    // Call function setPosAndPreset() for each cube
 
     while(it != cubes.end()){
-        (*it)->setPosition(*nP, *nS);
+        (*it)->setPosAndPreset(*nP, *nS, unit);
         ++it;
         ++nP;
         ++nS;
     }
-
     return true;
 }
+//-----------------------------------------------------
+//                                              closeIt
+//-----------------------------------------------------
 
+/*
+/ *****************************************************
+/ Close hands
+/ *****************************************************
+/       _input:
+/               - position, position for each cubes
+/       _output:
+/               [state]
+/
+*/
 
 bool QBchain::closeIt(std::vector<double> position){
 
     std::vector<QBHand*>::iterator it = hands.begin();
     std::vector<double>::iterator nP = position.begin();
 
+    // Close hands
 
     while(it != hands.end()){
-        (*it)->setPosition(*nP);
+        (*it)->setPosPerc(*nP);
         ++it;
         ++nP;
     }
@@ -154,53 +342,115 @@ bool QBchain::closeIt(std::vector<double> position){
     return true;
 }
 
+//-----------------------------------------------------
+//                                               readIt
+//-----------------------------------------------------
 
-bool QBchain::readIt(){
+/*
+/ *****************************************************
+/ Read position of all engines
+/ *****************************************************
+/       _input:
+/       - meas, vector of measurements [1/2/L]
+/           for each cube
+/       - mHand, vector of hands posititions
+/       _output:
+/               [state]
+/
+*/
 
-    short int *meas = new short int(3);
-    short int *mHand = new short int;
+bool QBchain::readIt(short int* meas, short int* mHand){
+
+    int i = 0;
+
+    // Read position from cubes
 
     for (std::vector<QBcube*>::iterator it = cubes.begin(); it!=cubes.end(); ++it){
-        meas = (*it)->getMeas();
-	std::cout << meas[0] << ' ' << meas[1] << " "<< meas[2] << std::endl;
+        (*it)->getMeas(&meas[3*i]);
+        ++i;
     }
 
-    for (std::vector<QBHand*>::iterator it = hands.begin(); it!=hands.end(); ++it){
-        mHand = (*it)->getMeas();
-       std::cout << *mHand << std::endl;
-    }
+    // Read position from hands
+
+    i = 0;
+
+    for (std::vector<QBHand*>::iterator it = hands.begin(); it!=hands.end(); ++it)
+        (*it)->getMeas(&mHand[i++]);
+
     return true;
 }
 
-//bool QBchain::reachPosEE(const double *point){
-//
-//}
+//-----------------------------------------------------
+//                                              readAng
+//-----------------------------------------------------
 
-double* QBchain::readAng(){
+/*
+/ *****************************************************
+/ Read position of all engines
+/ *****************************************************
+/       _input:
+/       - angles, angles of all cubes
+        - handsC, closing rate of all hands
+/               - unit, unit of measure
+/       _output:
+/               [state]
+/
+*/
 
-	if ((cubes.size() == 0) && (hands.size() == 0))
-		return NULL;
+bool QBchain::readAng(double* angles, double* handsC, const char* unit = "rad"){
 
-	double* buf = new double(cubes.size() + hands.size());
-	int i = 0;
+    // Check inputs rightness
 
-	for (std::vector<QBcube*>::iterator it = cubes.begin(); it!=cubes.end(); ++it)
-        buf[i++] = (*it)->getAngle();
+    if ((cubes.size() == 0) && (hands.size() == 0))
+        return false;
 
-    for (std::vector<QBHand*>::iterator it = hands.begin(); it!=hands.end(); ++it)
-        buf[i++] = (*it)->getAngle();
 
-	 //std::cout << cubes.size() + hands.size() << " " << i << std::endl;
-	return buf;
+    if (!strcmp(unit, "deg") && !strcmp(unit, "rad"))
+        return false;
+
+    // Read Angle of cubes and hands
+
+    int i = 0;
+    //bool flagC = true, flagM = true;
+
+    for (std::vector<QBcube*>::iterator it = cubes.begin(); it!=cubes.end(); ++it){
+        while(!((*it)->getAngle(&angles[i], unit)));
+        
+        i++;
+         //flagC &= (*it)->getAngle(&angles[i++], unit);
+    }
+
+    i = 0;
+
+    for (std::vector<QBHand*>::iterator it = hands.begin(); it!=hands.end(); ++it){
+        while(!((*it)->getAngle(&handsC[i])));
+
+        i++;
+    }
+//        flagM &= (*it)->getAngle(&handsC[i++]);
+
+
+      return true;
 }
 
+//-----------------------------------------------------
+//                                                 init
+//-----------------------------------------------------
 
-void QBchain::Init(){
+/*
+/ *****************************************************
+/ Init default function for all objects
+/ *****************************************************
+/       _input:
+/       _output:
+/               [state]
+/
+*/
 
-    for (std::vector<QBcube*>::iterator it = cubes.begin(); it!=cubes.end(); ++it)
-	(*it)->Init();
+void QBchain::init(){
 
+    // Call init function for each hand
 
     for (std::vector<QBHand*>::iterator it = hands.begin(); it!=hands.end(); ++it)
-        (*it)->Init();
+        (*it)->init();
 }

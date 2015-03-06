@@ -1,7 +1,10 @@
 #ifndef QBCHAIN_H
 #define QBCHAIN_H
 
+#define NUM_OUT 10
+
 #include <vector>
+#include <string.h>
 #include "QBcube.h"
 #include "QBHand.h"
 
@@ -12,74 +15,109 @@ class QBchain
     comm_settings* cube_comm;
     std::vector<QBcube*> cubes;
     std::vector<QBHand*> hands;
-    std::string port_;
 
     public:
+        //------------------------------ QBchain
+        /*
+        / Costructor of QBchain class
+        */
         QBchain();
+
+        //------------------------------ ~QBchain
+        /*
+        / Distructor of QBcube class
+        */
         virtual ~QBchain();
 
-// FUNZIONI OPERATIVE
 
-// ---------------------------------------------------------------------
-// Setta la porta di comunicazione
-// ---------------------------------------------------------------------
-        bool setPort(const char*);
-// ---------------------------------------------------------------------
-// Apertura comunicazione
-// ---------------------------------------------------------------------
-        bool open();
-// ---------------------------------------------------------------------
-// Chiusura comunicazione
-// ---------------------------------------------------------------------
+        // ------------------------------
+        //              Further Functions
+        // ------------------------------
+
+        //------------------------------ open
+        /*
+        / Open connection with all cubes and hands
+        */
+        bool open(const char*);
+
+        //------------------------------ close
+        /*
+        / Close connection of all cubes and hands
+        */
         bool close();
 
-// FUNZIONI MEMBRO
+        // ------------------------------
+        //       Member Functions
+        // ------------------------------
 
-// ---------------------------------------------------------------------
-// Aggiunta elementi cubo alla catena
-// ---------------------------------------------------------------------
+        //------------------------------ addCubes
+        /*
+        / Add cubes to the chain
+        */
         bool addCubes(std::vector<int>);
-// ---------------------------------------------------------------------
-// Aggiunta elementi mano alla catena
-// ---------------------------------------------------------------------
+
+        //------------------------------ addHands
+        /*
+        / Add hands to the chain
+        */
         bool addHands(std::vector<int>);
-// ---------------------------------------------------------------------
-// Muovi elementi della catena
-// ---------------------------------------------------------------------
-        bool moveIt(std::vector<double>, std::vector<double>);
-// ---------------------------------------------------------------------
-// Chiudi elementi Hand
-// ---------------------------------------------------------------------
+
+        //------------------------------ moveIt
+        /*
+        / Move the chain to desiderated position and preset,
+        / commanded is given in q-space configuration
+        */
+        bool moveIt(std::vector<double>, std::vector<double>, const char* unit);
+
+        //------------------------------ closeIt
+        /*
+        / Close hands
+        */
         bool closeIt(std::vector<double>);
-// ---------------------------------------------------------------------
-// Legge informazioni dagli elementi della catena
-// ---------------------------------------------------------------------
-        bool readIt();
-// ---------------------------------------------------------------------
-// Raggiungi Posizione E-E
-// ---------------------------------------------------------------------
-        bool reachPosionEE(const double*);
-// ---------------------------------------------------------------------
-// Legge Posizione degli angoli [rad]
-// ---------------------------------------------------------------------
-        double* readAng();
-// ---------------------------------------------------------------------
-// Inizializza i valori di ogni elemento della catena
-// ---------------------------------------------------------------------
-        void Init();
+
+        //------------------------------ readIt
+        /*
+        /Read position of all engines
+        */
+        bool readIt(short int*, short int*);
+
+        //------------------------------ readIt
+        /*
+        / Read position of all engines
+        */
+        bool readAng(double*, double*, const char*);
+
+        //------------------------------ init
+        /*
+        / Init default function for all objects
+        */
+        void init();
+
+        //------------------------------ active
+        /*
+        / Close connection of all cubes and hands
+        */
+        bool activate();
+
+        //------------------------------ active
+        /*
+        / Close connection of all cubes and hands
+        */
+        bool deactivate();
 
 
     protected:
-// ---------------------------------------------------------------------
-// Genera Jacobiano tramite la matrice di Denavit-Hartemberg
-// ---------------------------------------------------------------------
+
+        //------------------------------ DH2Jacobian
+        /* TODO
+        / Generate Jacobian through DH matrix
+        */
         void DH2Jacobian(const char *);
 
     private:
-// ---------------------------------------------------------------------
-// Attiva gli elementi QB~
-// ---------------------------------------------------------------------
-        bool Activate();
+
+
+
 
 };
 

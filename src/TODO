@@ -1,2 +1,3 @@
-- Fix Communication Problem with handshake
-- 
+- Fix read() problem
+- Add verbose mode
+- Init function: command a default position
